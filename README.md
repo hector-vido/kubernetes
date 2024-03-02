@@ -6,20 +6,22 @@ Se está começando com o Kubernetes, recomendo utilizar o **minikube**, pois es
 
 ## KVM
 
-Para quem utiliza Linux baseados em RHEL e tem problemas com SELinux ou mesmo não queria digitar usuário e senha a todo `vagrant up` para montar os NFS, podemos utilizar `virtiofs` para compartilhar diretórios:
+Para quem utiliza Linux baseados em RHEL e tem problemas com SELinux ou mesmo não queira digitar usuário e senha a todo `vagrant up` para montar os NFS, podemos utilizar `virtiofs` para compartilhar diretórios:
 
 **~/.vagrant.d/Vagrantfile**
 
 ```ruby
 Vagrant.configure("2") do |config|
   config.vm.provider :libvirt do |libvirt|
-    libvirt.cpus = 2
-    libvirt.numa_nodes = [{ :cpus => "0-1", :memory => 8192, :memAccess => "shared" }]
     libvirt.memorybacking :access, :mode => "shared"
+    libvirt.qemu_use_session = false
+    libvirt.system_uri = 'qemu:///system'
   end
   config.vm.synced_folder "./", "/vagrant", type: "virtiofs"
 end
 ```
+
+> A opção `qemu_use_session` está em `false` pois a sessão comum de usuário não pode criar redes.
 
 # Kubernetes
 
@@ -277,26 +279,59 @@ Em serviços de cloud como DigitalOcean ou GCP, já existe um controlador de ing
 
 ### Instalação
 
+A instalação será baseada no Nginx ingress, mais detalhes podem ser encontrados em [https://kubernetes.github.io/ingress-nginx/deploy/](https://kubernetes.github.io/ingress-nginx/deploy/).
+
 Aplique o manifesto que adicionará todos os objetos necessários:
 
 ```bash
-kubectl create -f https://haproxy-ingress.github.io/resources/haproxy-ingress.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
-O controle do ingress vai apenas para as máquinas especificadas com o label `role=ingress-controller`, vamos adicioná-lo:
+Verifique se os pods no namespace `ingress-nginx` estão completos e/ou rodando:
 
 ```bash
-for X in master node1 node2; do
-	kubectl label node $X role=ingress-controller
-done
+kubectl get pods --namespace=ingress-nginx
+#NAME                                        READY   STATUS       RESTARTS   AGE
+#ingress-nginx-admission-create-kqf2n        0/1     Completed    0          32s
+#ingress-nginx-admission-patch-b6v29         0/1     Completed    0          32s
+#ingress-nginx-controller-7dcdbcff84-gptk2   0/1     Running      0          32s
 ```
+
+Faremos três modificações no `deployment`:
+
+- Para que o ingress utilize a rede da máquina hospedeira e consiga utilizar as portas 80 e 443, deixaremos explícito que a rede a ser utilzada é a do host.
+- Utilizaremos 3 réplicas, desta forma qualquer máquina deste laboratório pode responder na porta 80 e 443.
+- Criaremos uma `toleration` para que um pod consiga rodar no control.
+
+```bash
+kubectl edit deploy -n ingress-nginx ingress-nginx-controller
+```
+
+```yml
+...
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+...
+    spec:
+      hostNetwork: true
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+      containers:
+      - args:
+...
+```
+
+### Criando um Ingress
 
 Para acelerar as coisas, crie o o deployment (altere para 4 réplicas) e o serviço através da linha de comando:
 
 ```bash
 kubectl create deployment cgi --image=hectorvido/sh-cgi
 kubectl patch deployment cgi -p '{"spec" : {"replicas" : 4}}' # ou scale deploy
-kubectl expose deployment cgi --port 80 --target-port 8080
+kubectl expose deployment cgi --port 80 --target-port 80
 kubectl get all
 ```
 
@@ -319,24 +354,34 @@ kubectl edit secret cgi
 
 Com tudo pronto, definiremos o ingress que irá responder pelo **hostname** e apontar para um determinado serviço:
 
+```bash
+kubectl create ingress cgi --rule='cgi.192-168-56-20.nip.io/=cgi:80,tls=cgi' --class=nginx
+```
+
+O YAML deste comando é o seguinte:
+
 ```yml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: cgi
+  namespace: default
 spec:
-  tls:
-  - hosts:
-    - cgi.172-27-11-10.nip.io
-    secretName: cgi
   rules:
-  - host: cgi.172-27-11-10.nip.io
+  - host: cgi.192-168-56-20.nip.io
     http:
       paths:
-      - path: /
-        backend:
-          serviceName: cgi
-          servicePort: 80
+      - backend:
+          service:
+            name: cgi
+            port:
+              number: 80
+        path: /
+        pathType: Exact
+  tls:
+  - hosts:
+    - cgi.192.168.56.20.nip.io
+    secretName: cgi
 ```
 
 Provisione o serviço no cluster e teste o endereço adicionando o ip de qualquer um dos **minions** no */etc/hosts* ou utilizando o parâmetro --resolv do curl:

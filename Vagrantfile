@@ -2,9 +2,9 @@
 # vi: set ft=ruby :
 
 vms = {
-  'master'  => {'memory' => '2048', 'cpus' => 2, 'ip' => '10', 'provision' => 'master.sh'},
-  'node1'   => {'memory' => '1024', 'cpus' => 1, 'ip' => '20', 'provision' => 'node.sh'},
-  'node2'   => {'memory' => '1024', 'cpus' => 1, 'ip' => '30', 'provision' => 'node.sh'},
+  'control' => {'memory' => '2048', 'cpus' => 2, 'ip' => '10', 'provision' => 'control.sh'},
+  'worker1' => {'memory' => '1024', 'cpus' => 1, 'ip' => '20', 'provision' => 'worker.sh'},
+  'worker2' => {'memory' => '1024', 'cpus' => 1, 'ip' => '30', 'provision' => 'worker.sh'},
   'storage' => {'memory' => '512',  'cpus' => 1, 'ip' => '40', 'provision' => 'storage.sh'}
 }
 
@@ -25,8 +25,6 @@ Vagrant.configure('2') do |config|
         lv.memory = conf['memory']
         lv.cpus = conf['cpus']
         lv.cputopology :sockets => 1, :cores => conf['cpus'], :threads => '1'
-        lv.qemu_use_session = false
-        lv.system_uri = 'qemu:///system'
       end
       k.vm.provision 'shell', path: "provision/#{conf['provision']}", args: "#{conf['ip']}"
     end
