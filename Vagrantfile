@@ -10,7 +10,7 @@ vms = {
 
 Vagrant.configure('2') do |config|
 
-  config.vm.box = 'debian/bullseye64'
+  config.vm.box = 'debian/bookworm64'
   config.vm.box_check_update = false
 
   vms.each do |name, conf|
@@ -25,6 +25,8 @@ Vagrant.configure('2') do |config|
         lv.memory = conf['memory']
         lv.cpus = conf['cpus']
         lv.cputopology :sockets => 1, :cores => conf['cpus'], :threads => '1'
+        lv.qemu_use_session = false
+        lv.system_uri = 'qemu:///system'
       end
       k.vm.provision 'shell', path: "provision/#{conf['provision']}", args: "#{conf['ip']}"
     end

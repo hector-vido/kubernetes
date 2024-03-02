@@ -17,13 +17,13 @@ EOF
 sudo sysctl --system
 
 apt-get update
-apt-get install -y apt-transport-https ca-certificates curl gnupg2 vim telnet nfs-common
+apt-get install -y apt-transport-https ca-certificates curl gpg vim nfs-common
 
 export OS='Debian_11'
 export VERSION='1.24'
 export PREFIX='signed-by=/usr/share/keyrings'
 
-echo "deb [$PREFIX/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" \
+echo "deb [$PREFIX/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /" \
 	> /etc/apt/sources.list.d/kubernetes.list
 echo "deb [$PREFIX/libcontainers-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /" \
 	> /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
@@ -31,6 +31,7 @@ echo "deb [$PREFIX/libcontainers-crio-archive-keyring.gpg] https://download.open
 	> /etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.list
 
 mkdir -p /usr/share/keyrings
+curl -L https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg
 curl -L https://packages.cloud.google.com/apt/doc/apt-key.gpg > /usr/share/keyrings/kubernetes-archive-keyring.gpg
 curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/Release.key \
 	| gpg --dearmor > /usr/share/keyrings/libcontainers-archive-keyring.gpg

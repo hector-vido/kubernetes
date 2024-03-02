@@ -1,7 +1,29 @@
-# Kubernetes
+# Repositório
 
 A intenção deste repositório é fornecer um **Vagrantfile** capaz de criar um cluster kubernetes, fazendo com que a interação com o cluster esteja mais próxima dos ambientes de produção.
-Abaixo há uma pequena introdução a respeito do universo dos contâineres e o papel do Kubernetes (k8s) neste universo, logo após, dezenas de objetos são exemplificados com breves descrições de seu uso.
+
+Se está começando com o Kubernetes, recomendo utilizar o **minikube**, pois este provisionamento é mais interessante para quem pretende conhecer a infraestrutura.
+
+## KVM
+
+Para quem utiliza Linux baseados em RHEL e tem problemas com SELinux ou mesmo não queria digitar usuário e senha a todo `vagrant up` para montar os NFS, podemos utilizar `virtiofs` para compartilhar diretórios:
+
+**~/.vagrant.d/Vagrantfile**
+
+```ruby
+Vagrant.configure("2") do |config|
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.cpus = 2
+    libvirt.numa_nodes = [{ :cpus => "0-1", :memory => 8192, :memAccess => "shared" }]
+    libvirt.memorybacking :access, :mode => "shared"
+  end
+  config.vm.synced_folder "./", "/vagrant", type: "virtiofs"
+end
+```
+
+# Kubernetes
+
+Abaixo há uma pequena introdução a respeito do universo dos contâineres e o papel do Kubernetes, logo após, alguns objetos do Kubernetes são apresentados com breves descrições.
 
 ## Container
 
@@ -17,7 +39,7 @@ Abaixo há uma pequena introdução a respeito do universo dos contâineres e o 
 
 ## Orquestrador
 
-Microserviços são construídos em cima de uma rígida organização. Com o tempo, alocação de recursos, self-healing, táticas de deploy, proximidade de serviços, movimentação de containers e rollbacks começam a aumentar a complexibilidade de uma infraestrutura. É neste momento que um orquestrador é necessário, ou seja, o Kubernetes.
+Serviços baseados em contêineres são construídos em cima de uma rígida organização. Com o tempo, alocação de recursos, self-healing, táticas de deploy, proximidade de serviços, movimentação de containers e rollbacks começam a aumentar a complexibilidade de uma infraestrutura. É neste momento que um orquestrador é necessário, ou seja, o Kubernetes.
 
 # Objetos do Kubernetes
 
