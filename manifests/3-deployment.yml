@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cgi
+  name: cgi
+  namespace: default
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: cgi
+  template:
+    metadata:
+      labels:
+        app: cgi
+    spec:
+      containers:
+      - name: sh-cgi
+        image: docker.io/hectorvido/sh-cgi
+        imagePullPolicy: IfNotPresent
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: cgi
+  name: cgi
+  namespace: default
+spec:
+  ports:
+  - port: 9090
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: cgi
+  type: ClusterIP

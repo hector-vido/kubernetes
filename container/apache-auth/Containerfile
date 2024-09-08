@@ -1,0 +1,11 @@
+FROM alpine
+
+ENV HTPASSWD_USER=apache
+ENV HTPASSWD_PASS=123
+
+RUN apk add --no-cache apache2 apache2-utils && \
+echo '<h1>:)</h1>' > /var/www/localhost/htdocs/index.html
+
+COPY entrypoint.sh /
+
+CMD ["sh", "/entrypoint.sh"]

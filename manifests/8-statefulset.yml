@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb
+  namespace: database
+  labels:
+    app: couchdb
+spec:
+  ports:
+  - port: 5984
+    name: web
+  clusterIP: None
+  selector:
+    app: couchdb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: couchdb
+  namespace: database
+spec:
+  selector:
+    matchLabels:
+      app: couchdb
+  serviceName: "couchdb"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: couchdb
+    spec:
+      nodeName: worker2
+      containers:
+      - name: couchdb
+        image: docker.io/library/couchdb
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: COUCHDB_USER
+          value: developer
+        - name: COUCHDB_PASSWORD
+          value: secret
+        volumeMounts:
+        - name: data
+          mountPath: /opt/couchdb/data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: couchdb
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: /srv/couchdb

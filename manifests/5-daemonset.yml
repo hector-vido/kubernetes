@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: memcached
+spec:
+  selector:
+    matchLabels:
+      name: memcached
+  template:
+    metadata:
+      labels:
+        name: memcached
+    spec:
+      containers:
+      - name: memcached
+        image: docker.io/library/memcached:alpine
+        imagePullPolicy: IfNotPresent
